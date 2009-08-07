@@ -17,7 +17,23 @@ def rand_point():
 
 def rand_color_RGBA():
     return [rnd_8b(), rnd_8b(), rnd_8b(), rnd_8b()]
-    
+
+def rand_triang(center,sup_bound):
+    r = random.triangular(0, sup_bound, center)
+    if r >sup_bound:
+        r = sup_bound
+    elif r < 0:
+        r = 0
+    return r
+
+def rand_gauss(mu, sigma, sup_bound):
+    r = random.gauss(mu, sigma)
+    if r >sup_bound:
+        r = sup_bound
+    elif r < 0:
+        r = 0
+    return r
+
 
 class Polygon(object):
     def __init__(self, points, color_RGBA):
@@ -27,22 +43,62 @@ class Polygon(object):
     def mutate(self):
         """ Random mutation of one element of the polygon.
         """
+        self.mutate_gauss()
+
+
+    def mutate_medum(self):
         r = random.uniform(0, 2)
         if r < 1:
             if r < 0.25:
-                self.color_RGBA[0] = rnd_8b()
+                self.color_RGBA[0] = random.getrandbits(8)
             elif r < 0.5:
-                self.color_RGBA[1] = rnd_8b()
+                self.color_RGBA[1] = random.getrandbits(8)
             elif r < 0.75:
-                self.color_RGBA[2] = rnd_8b()
+                self.color_RGBA[2] = random.getrandbits(8)
             else:
-                self.color_RGBA[3] = rnd_8b()
+                self.color_RGBA[3] = random.getrandbits(8)
         else:
             point = self.points[random.randint(0, NUM_VERTEX-1)]
             if r <1.5:
                 point[0] =  random.randint(0, SIZE[0]-1)
             else:
                 point[1] =  random.randint(0, SIZE[0]-1)
+
+    def mutate_triang(self):
+        r = random.uniform(0, 2)
+        if r < 1:
+            if r < 0.25:
+                self.color_RGBA[0] = rand_triang(self.color_RGBA[0],255)
+            elif r < 0.5:
+                self.color_RGBA[1] = rand_triang(self.color_RGBA[1],255)
+            elif r < 0.75:
+                self.color_RGBA[2] = rand_triang(self.color_RGBA[2],255)
+            else:
+                self.color_RGBA[3] = rand_triang(self.color_RGBA[3],255)
+        else:
+            point = self.points[random.randint(0, NUM_VERTEX-1)]
+            if r <1.5:
+                point[0] =  rand_triang(point[0],SIZE[0]-1)
+            else:
+                point[1] =  rand_triang(point[1],SIZE[1]-1)
+
+    def mutate_gauss(self, sigma = 10):
+        r = random.uniform(0, 2)
+        if r < 1:
+            if r < 0.25:
+                self.color_RGBA[0] = rand_gauss(self.color_RGBA[0], sigma, 255)
+            elif r < 0.5:
+                self.color_RGBA[1] = rand_gauss(self.color_RGBA[1], sigma, 255)
+            elif r < 0.75:
+                self.color_RGBA[2] = rand_gauss(self.color_RGBA[2], sigma, 255)
+            else:
+                self.color_RGBA[3] = rand_gauss(self.color_RGBA[3], sigma, 255)
+        else:
+            point = self.points[random.randint(0, NUM_VERTEX-1)]
+            if r <1.5:
+                point[0] =  rand_gauss(point[0], sigma, SIZE[0]-1)
+            else:
+                point[1] =  rand_gauss(point[1], sigma, SIZE[1]-1)
 
     def deep_copy(self):
         return Polygon([point[:] for point in self.points],self.color_RGBA[:])
@@ -53,7 +109,7 @@ class Polygon(object):
 
 def diff_2d(goal, test):
     """ Returns the difference of two pygame.surfarray.array2d matrix.
-    To use only in 32 bit! 
+    To use only in 32 bit!
     """
     # Doing a workarround numpy's fucking interpretation of alpha chanell.
     goal.dtype = "uint32" # Special shake of bits to get the alpha channel
@@ -62,13 +118,13 @@ def diff_2d(goal, test):
     s2 = (test & 0xFF000000) >> 24
     s1.dtype, s2.dtype, goal.dtype, test.dtype = "int32", "int32","int32","int32"
     d1 = numpy.absolute(s1 - s2)
-    d2 = numpy.absolute(((goal & 0x00FF0000) >> 16) - ((test & 0x00FF0000) >> 16)) 
+    d2 = numpy.absolute(((goal & 0x00FF0000) >> 16) - ((test & 0x00FF0000) >> 16))
     d3 = numpy.absolute(((goal & 0x0000FF00) >> 8)  - ((test & 0x0000FF00) >> 8 ))
     d4 = numpy.absolute((goal & 0x000000FF )      - (test & 0x000000FF      ))
     return numpy.sum(d2)+numpy.sum(d3)+numpy.sum(d4) + numpy.sum(d1)
 
 def diff_3d(goal_color,goal_alpha, test_color, test_alpha, rect=None):
-    """ Returns the difference of two pygame.surfarray.array3d and two 
+    """ Returns the difference of two pygame.surfarray.array3d and two
     pygame.surfarray.array_alpha matrix. If rect, an optional pygame.Rect
     object, is supplyed diff_3d will take the difference only to that rectangle area.
     To use only with "int64" (TODO: check this).
@@ -149,14 +205,14 @@ if __name__ == '__main__':
                 quit = True
         if quit:
             break
-     
+
         n_intentos +=1
 
         screen.fill((255,255,255,0))
         selected_poly_n = random.randint(0, NUM_POLY-1)
         selected_poly = polygons[selected_poly_n]
         selected_poly_copy = selected_poly.deep_copy() # To preserve the unmutated polygon.
-        
+
         for poly in polygons:
             test_surf.fill((255,255,255,0))
             if poly == selected_poly:
