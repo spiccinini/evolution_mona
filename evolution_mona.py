@@ -4,8 +4,6 @@ from pygame.locals import QUIT, KEYDOWN, K_ESCAPE
 import numpy # Only working with numpy
 import sys, random, time
 
-
-
 NUM_POLY = 25
 NUM_VERTEX = 6
 RES = (200,200)
@@ -125,8 +123,8 @@ if __name__ == '__main__':
     polygons = [Polygon([rand_point() for k in range(NUM_VERTEX)], rand_color_RGBA()) for n in range(NUM_POLY)]
 
     # Pygame init
-    screen = pygame.display.set_mode(RES, pygame.SRCALPHA)
-    test_surf = pygame.Surface(SIZE, pygame.SRCALPHA)
+    screen = pygame.display.set_mode(RES, pygame.SRCALPHA, 32)
+    test_surf = pygame.Surface(SIZE, pygame.SRCALPHA, 32)
     #test_surf2 = pygame.Surface(SIZE, pygame.SRCALPHA)
 
 
@@ -142,6 +140,8 @@ if __name__ == '__main__':
     n_intentos = 0
     n_mejoras = 0
     quit = False
+    clock = pygame.time.Clock()
+    clock.tick()
     while 1:
         event_list = pygame.event.get()
         for event in event_list:
@@ -175,6 +175,16 @@ if __name__ == '__main__':
 
         else: # recover the mutated poly
             polygons[selected_poly_n] = selected_poly_copy.deep_copy()
+
+        # Display time
+        if n_intentos % 100 == 0:
+            time = clock.get_time()
+            if time:
+                print 100000.0/time
+
+            clock.tick()
+
+
         pygame.display.update()
 
 
