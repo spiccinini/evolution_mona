@@ -1,10 +1,37 @@
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+
+# Copyright (c) 2009 Piccinini Santiago
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 import pygame
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE
 import numpy # Only working with numpy
 import sys, random, time
 
-NUM_POLY = 25
+try:
+	pygame.surfarray.use_arraytype("numpy")
+except ValueError:
+	print "You need numpy to run this program."
+
+NUM_POLY = 50
 NUM_VERTEX = 6
 RES = (200,200)
 SIZE = (200, 200)
@@ -43,10 +70,10 @@ class Polygon(object):
     def mutate(self):
         """ Random mutation of one element of the polygon.
         """
-        self.mutate_gauss()
+        self.mutate_medium()
 
 
-    def mutate_medum(self):
+    def mutate_medium(self):
         r = random.uniform(0, 2)
         if r < 1:
             if r < 0.25:
