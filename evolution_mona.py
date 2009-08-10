@@ -23,18 +23,18 @@
 
 import pygame
 from pygame.locals import QUIT, KEYDOWN, K_ESCAPE
-import numpy # Only working with numpy
 import sys, random, time
 
 try:
+    import numpy
     pygame.surfarray.use_arraytype("numpy")
-except ValueError:
-    print "You need numpy to run this program."
-
-NUM_POLY = 50
-NUM_VERTEX = 6
-RES = (200,200)
-SIZE = (200, 200)
+except ImportError:
+    import Numeric
+    pygame.surfarray.use_arraytype("numeric")
+except ImportError:
+    print "You need numpy or Numeric installed to run this program."
+    print "numpy is faster than Numeric."
+    sys.exit(1)
 
 def rnd_8b():
     return random.getrandbits(8)
@@ -134,9 +134,9 @@ class Polygon(object):
         return  repr(self.points) + repr(self.color_RGBA)
 
 
-def diff_2d(goal, test):
+def diff_2d_numpy(goal, test):
     """ Returns the difference of two pygame.surfarray.array2d matrix.
-    To use only in 32 bit!
+    To use only in 32 bit and with numpy!
     """
     # Doing a workarround numpy's fucking interpretation of alpha chanell.
     goal.dtype = "uint32" # Special shake of bits to get the alpha channel
@@ -147,8 +147,20 @@ def diff_2d(goal, test):
     d1 = numpy.absolute(s1 - s2)
     d2 = numpy.absolute(((goal & 0x00FF0000) >> 16) - ((test & 0x00FF0000) >> 16))
     d3 = numpy.absolute(((goal & 0x0000FF00) >> 8)  - ((test & 0x0000FF00) >> 8 ))
-    d4 = numpy.absolute((goal & 0x000000FF )      - (test & 0x000000FF      ))
-    return numpy.sum(d2)+numpy.sum(d3)+numpy.sum(d4) + numpy.sum(d1)
+    d4 = numpy.absolute((goal & 0x000000FF )        - (test & 0x000000FF        ))
+    return numpy.sum(d2) + numpy.sum(d3) + numpy.sum(d4) + numpy.sum(d1)
+
+def diff_2d_numeric(goal, test):
+    """ Returns the difference of two pygame.surfarray.array2d matrix.
+    To use only in 32 bit and with numeric!
+    """
+    s1 = (goal & 0xFF000000) >> 24
+    s2 = (test & 0xFF000000) >> 24
+    d1 = numpy.absolute(s1 - s2)
+    d2 = numpy.absolute(((goal & 0x00FF0000) >> 16) - ((test & 0x00FF0000) >> 16))
+    d3 = numpy.absolute(((goal & 0x0000FF00) >> 8)  - ((test & 0x0000FF00) >> 8 ))
+    d4 = numpy.absolute(( goal & 0x000000FF)        - ( test & 0x000000FF       ))
+    return numpy.sum(d2) + numpy.sum(d3) + numpy.sum(d4) + numpy.sum(d1)
 
 def diff_3d(goal_color,goal_alpha, test_color, test_alpha, rect=None):
     """ Returns the difference of two pygame.surfarray.array3d and two
@@ -198,9 +210,38 @@ def build_svg(polygons):
     f.close()
 
 
+def test():
+    
+    test_surf = pygame.Surface((2,2), pygame.SRCALPHA, 32)
+    test_surf2 = pygame.Surface((2,2), pygame.SRCALPHA, 32)
+    test_surf.fill((100,100,100,22))
+    test_surf2.fill((255,255,255,22))
 
+    t1 = pygame.surfarray.array2d(test_surf)
+    t2 = pygame.surfarray.array2d(test_surf2)
+    print diff_2d(t1,t2)
+    print diff_2d(t2,t1)
+    pygame.surfarray.use_arraytype("numeric")
+    #test_surf = pygame.Surface((2,2), pygame.SRCALPHA, 32)
+    #test_surf2 = pygame.Surface((2,2), pygame.SRCALPHA, 32)
+    t1 = pygame.surfarray.array2d(test_surf)
+    
+    t2 = pygame.surfarray.array2d(test_surf2)
+    print t1
+    print type(t1)
+    print t1.typecode()
+    print diff_2d2(t1,t2)
+    print diff_2d2(t2,t1)
+    sys.exit(0)
 
 if __name__ == '__main__':
+
+    NUM_POLY = 50
+    NUM_VERTEX = 6
+
+    RES = (200,200)
+    SIZE = (200, 200)
+    MAX_DIFF = 255 * 4 * SIZE[0]*SIZE[1]
 
     #Initialize polygons
     polygons = [Polygon([rand_point() for k in range(NUM_VERTEX)], rand_color_RGBA()) for n in range(NUM_POLY)]
@@ -208,17 +249,18 @@ if __name__ == '__main__':
     # Pygame init
     screen = pygame.display.set_mode(RES, pygame.SRCALPHA, 32)
     test_surf = pygame.Surface(SIZE, pygame.SRCALPHA, 32)
-    #test_surf2 = pygame.Surface(SIZE, pygame.SRCALPHA)
-
 
     goal_img = pygame.image.load("mona.png").convert_alpha()
     goal_2d    = pygame.surfarray.array2d(goal_img)
 
-    #screen.blit(mona_img,(0,0))
-    #pygame.display.update()
+    # Set diff function to use
+    arraytype = pygame.surfarray.get_arraytype()
+    if arraytype == "numpy":
+        diff_2d = diff_2d_numpy
+    else:
+        diff_2d = diff_2d_numeric
 
-
-    MAX_DIFF = 255 * 4 * SIZE[0]*SIZE[1]
+    
     lowest_diff = MAX_DIFF
     n_intentos = 0
     n_mejoras = 0
@@ -254,7 +296,6 @@ if __name__ == '__main__':
         if difference < lowest_diff:
             lowest_diff = difference
             n_mejoras += 1
-            print "mejora N %d, intentos %d, equal %%%f " % (n_mejoras, n_intentos, MAX_DIFF/float(difference)*10,)
 
         else: # recover the mutated poly
             polygons[selected_poly_n] = selected_poly_copy.deep_copy()
@@ -263,8 +304,9 @@ if __name__ == '__main__':
         if n_intentos % 100 == 0:
             time = clock.get_time()
             if time:
-                print "%d intentos por segundo" % (100000/time, )
 
+                print "Improvement N %d, mutations %d, mutations per second %d, fitness %%%f " % \
+                        (n_mejoras, n_intentos, 100000/time, (1-float(difference)/MAX_DIFF)*100,)
 
             clock.tick()
 
