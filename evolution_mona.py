@@ -27,9 +27,9 @@ import numpy # Only working with numpy
 import sys, random, time
 
 try:
-	pygame.surfarray.use_arraytype("numpy")
+    pygame.surfarray.use_arraytype("numpy")
 except ValueError:
-	print "You need numpy to run this program."
+    print "You need numpy to run this program."
 
 NUM_POLY = 50
 NUM_VERTEX = 6
@@ -109,7 +109,7 @@ class Polygon(object):
             else:
                 point[1] =  rand_triang(point[1],SIZE[1]-1)
 
-    def mutate_gauss(self, sigma = 10):
+    def mutate_gauss(self, sigma = 20):
         r = random.uniform(0, 2)
         if r < 1:
             if r < 0.25:
@@ -263,7 +263,8 @@ if __name__ == '__main__':
         if n_intentos % 100 == 0:
             time = clock.get_time()
             if time:
-                print 100000.0/time
+                print "%d intentos por segundo" % (100000/time, )
+
 
             clock.tick()
 
@@ -272,3 +273,4 @@ if __name__ == '__main__':
 
 
     build_svg(polygons)
+
