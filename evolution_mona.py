@@ -22,18 +22,14 @@
 # THE SOFTWARE.
 
 import pygame
-from pygame.locals import QUIT, KEYDOWN, K_ESCAPE
+from pygame.locals import QUIT, KEYDOWN, K_ESCAPE, K_g, K_t, K_m
 import sys, random, time
 
 try:
     import numpy
     pygame.surfarray.use_arraytype("numpy")
 except ImportError:
-    import Numeric
-    pygame.surfarray.use_arraytype("numeric")
-except ImportError:
-    print "You need numpy or Numeric installed to run this program."
-    print "numpy is faster than Numeric."
+    print "You need numpy installed to run this program."
     sys.exit(1)
 
 def rnd_8b():
@@ -63,15 +59,20 @@ def rand_gauss(mu, sigma, sup_bound):
 
 
 class Polygon(object):
-    def __init__(self, points, color_RGBA):
+    def __init__(self, points, color_RGBA, mutate_type = None):
         self.points = points
         self.color_RGBA = color_RGBA
+        self.mutate_type = mutate_type
 
     def mutate(self):
         """ Random mutation of one element of the polygon.
         """
-        self.mutate_medium()
-
+        if self.mutate_type == "triang":
+            self.mutate_triang()
+        elif self.mutate_type == "gauss":
+            self.mutate_gauss()
+        else:
+            self.mutate_medium()
 
     def mutate_medium(self):
         r = random.uniform(0, 2)
@@ -109,7 +110,7 @@ class Polygon(object):
             else:
                 point[1] =  rand_triang(point[1],SIZE[1]-1)
 
-    def mutate_gauss(self, sigma = 20):
+    def mutate_gauss(self, sigma = 10):
         r = random.uniform(0, 2)
         if r < 1:
             if r < 0.25:
@@ -126,15 +127,18 @@ class Polygon(object):
                 point[0] =  rand_gauss(point[0], sigma, SIZE[0]-1)
             else:
                 point[1] =  rand_gauss(point[1], sigma, SIZE[1]-1)
+    def set_mutation_type(self, type):
+        self.mutate_type = type
+
 
     def deep_copy(self):
-        return Polygon([point[:] for point in self.points],self.color_RGBA[:])
+        return Polygon([point[:] for point in self.points],self.color_RGBA[:], self.mutate_type)
 
     def __str__(self):
         return  repr(self.points) + repr(self.color_RGBA)
 
 
-def diff_2d_numpy(goal, test):
+def diff_2d(goal, test):
     """ Returns the difference of two pygame.surfarray.array2d matrix.
     To use only in 32 bit and with numpy!
     """
@@ -148,18 +152,6 @@ def diff_2d_numpy(goal, test):
     d2 = numpy.absolute(((goal & 0x00FF0000) >> 16) - ((test & 0x00FF0000) >> 16))
     d3 = numpy.absolute(((goal & 0x0000FF00) >> 8)  - ((test & 0x0000FF00) >> 8 ))
     d4 = numpy.absolute((goal & 0x000000FF )        - (test & 0x000000FF        ))
-    return numpy.sum(d2) + numpy.sum(d3) + numpy.sum(d4) + numpy.sum(d1)
-
-def diff_2d_numeric(goal, test):
-    """ Returns the difference of two pygame.surfarray.array2d matrix.
-    To use only in 32 bit and with numeric!
-    """
-    s1 = (goal & 0xFF000000) >> 24
-    s2 = (test & 0xFF000000) >> 24
-    d1 = numpy.absolute(s1 - s2)
-    d2 = numpy.absolute(((goal & 0x00FF0000) >> 16) - ((test & 0x00FF0000) >> 16))
-    d3 = numpy.absolute(((goal & 0x0000FF00) >> 8)  - ((test & 0x0000FF00) >> 8 ))
-    d4 = numpy.absolute(( goal & 0x000000FF)        - ( test & 0x000000FF       ))
     return numpy.sum(d2) + numpy.sum(d3) + numpy.sum(d4) + numpy.sum(d1)
 
 def diff_3d(goal_color,goal_alpha, test_color, test_alpha, rect=None):
@@ -192,7 +184,7 @@ def build_svg(polygons):
     width="800mm" height="600mm">
     """
     def to_svg_points(polygon):
-        return "%d " *2*NUM_VERTEX % tuple([x for x in itertools.chain.from_iterable(polygon.points)])
+        return "%d " *2*NUM_VERTEX % tuple([x for x in itertools.chain(*polygon.points)])
 
     def to_svg_color(polygon):
         return ' fill="rgb(%d,%d,%d)" opacity="%f" />'  % (polygon.color_RGBA[0],polygon.color_RGBA[1],polygon.color_RGBA[2],polygon.color_RGBA[3]/255.0)
@@ -210,31 +202,8 @@ def build_svg(polygons):
     f.close()
 
 
-def test():
-    
-    test_surf = pygame.Surface((2,2), pygame.SRCALPHA, 32)
-    test_surf2 = pygame.Surface((2,2), pygame.SRCALPHA, 32)
-    test_surf.fill((100,100,100,22))
-    test_surf2.fill((255,255,255,22))
-
-    t1 = pygame.surfarray.array2d(test_surf)
-    t2 = pygame.surfarray.array2d(test_surf2)
-    print diff_2d(t1,t2)
-    print diff_2d(t2,t1)
-    pygame.surfarray.use_arraytype("numeric")
-    #test_surf = pygame.Surface((2,2), pygame.SRCALPHA, 32)
-    #test_surf2 = pygame.Surface((2,2), pygame.SRCALPHA, 32)
-    t1 = pygame.surfarray.array2d(test_surf)
-    
-    t2 = pygame.surfarray.array2d(test_surf2)
-    print t1
-    print type(t1)
-    print t1.typecode()
-    print diff_2d2(t1,t2)
-    print diff_2d2(t2,t1)
-    sys.exit(0)
-
 if __name__ == '__main__':
+    print "To change random mutation type use keys: m (medium=defualt), t (triangular), g (gaussian)."
 
     NUM_POLY = 50
     NUM_VERTEX = 6
@@ -252,14 +221,6 @@ if __name__ == '__main__':
 
     goal_img = pygame.image.load("mona.png").convert_alpha()
     goal_2d    = pygame.surfarray.array2d(goal_img)
-
-    # Set diff function to use
-    arraytype = pygame.surfarray.get_arraytype()
-    if arraytype == "numpy":
-        diff_2d = diff_2d_numpy
-    else:
-        diff_2d = diff_2d_numeric
-
     
     lowest_diff = MAX_DIFF
     n_intentos = 0
@@ -272,6 +233,15 @@ if __name__ == '__main__':
         for event in event_list:
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 quit = True
+            elif event.type == KEYDOWN and event.key == K_m:
+                [poly.set_mutation_type("medium") for poly in polygons]
+                print "Set random type: medium"
+            elif event.type == KEYDOWN and event.key == K_g:
+                [poly.set_mutation_type("gauss") for poly in polygons]
+                print "Set random type: gaussian"
+            elif event.type == KEYDOWN and event.key == K_t:
+                [poly.set_mutation_type("triang") for poly in polygons]
+                print "Set random type: triang"
         if quit:
             break
 
