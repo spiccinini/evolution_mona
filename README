@@ -1,0 +1,34 @@
+Intro
+=====
+
+Evolution_mona evolves polygons to fit an image.
+
+Uses pygame to render graphics and numpy to make computations.
+Evolution_mona's heart is a simple hill climbing algorithm.
+
+Inspired by a post of Roger Alsing:
+
+ Genetic Programming: Evolution of Mona Lisa
+ http://rogeralsing.com/2008/12/07/genetic-programming-evolution-of-mona-lisa
+
+Dependencies
+============
+
+* python (tested on python-2.6)
+* pygame (tested on pygame-1.9)
+* numpy (tested on numpy-1.3)
+
+Installing
+==========
+
+Install dependencies and just exceute
+
+python evolution_mona.py
+
+or
+
+./evolution_mona.py
+
+to run evolution_mona.
+
+Have fun!
